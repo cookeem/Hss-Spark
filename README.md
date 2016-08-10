@@ -40,9 +40,14 @@ println(cmd)
 
 `
   val conf = new SparkConf().setMaster(configSparkMaster).setAppName(configSparkAppName)
+  
   val hssLibFile = new File("hss-lib")
+  
   val hssLibPath = hssLibFile.getAbsolutePath
+  
   //通过设置executor的classpath保证executor上也可以执行高版本KryoInjection
+  
   conf.set("spark.executor.extraClassPath", s"$hssLibPath/*")
+  
   conf.set("spark.executor.extraLibraryPath", s"$hssLibPath/*")
 `  

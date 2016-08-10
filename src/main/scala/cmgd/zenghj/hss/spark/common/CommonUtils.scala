@@ -51,5 +51,4 @@ object CommonUtils {
     println(s"[$logType] $timeStr: $msg")
   }
 
-
 }

@@ -1,3 +1,7 @@
+使用spark把kafka中的hss记录写入到elasticsearch中
+
+版本信息: spark-1.5.2 kafka-0.9.0.1 elasticsearch-2.3.1
+
 ## 1. 获取运行的依赖包,并放到hss-lib目录下
 新建目录
 

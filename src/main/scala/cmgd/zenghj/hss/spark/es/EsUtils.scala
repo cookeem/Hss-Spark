@@ -55,6 +55,7 @@ object EsUtils extends App {
                       .field("type", "string")
                       .field("index", "not_analyzed")
                     .endObject()
+                    //注意,使用了analyzer的字段不能进行排序
                     .startObject("StartTime")
                       .field("type", "string")
                       .field("index", "not_analyzed")

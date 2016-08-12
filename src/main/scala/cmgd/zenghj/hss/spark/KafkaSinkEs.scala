@@ -7,6 +7,7 @@ import cmgd.zenghj.hss.spark.es.EsUtils._
 import com.twitter.chill.KryoInjection
 
 import kafka.serializer.{DefaultDecoder, StringDecoder}
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.kafka.KafkaUtils
 import org.apache.spark.streaming.{StreamingContext, Seconds}
@@ -29,6 +30,8 @@ object KafkaSinkEs extends App {
   val ssc = new StreamingContext(conf, Seconds(configSparkStreamInterval))
   val topicsSet = Set(configKafkaRecordsTopic)
   val kafkaParams = Map[String, String](
+    //此选项用于设置kafka重新开始获取数据
+//    ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "smallest",
     "zookeeper.connect" -> configKafkaZkUri,
     "bootstrap.servers" -> configKafkaBrokers,
     "group.id" -> configKafkaConsumeGroup,
@@ -39,6 +42,7 @@ object KafkaSinkEs extends App {
   //初始化elasticsearch的index
   indexInit()
 
+  //TODO: KafkaUtils.createDirectStream有数据丢失的问题, 实际2732349的记录, es中只是保存了2633902条记录
   val messages = KafkaUtils.createDirectStream[String, Array[Byte], StringDecoder, DefaultDecoder](ssc, kafkaParams, topicsSet)
   val records = messages.map(_._2)
   records.foreachRDD { rdd =>

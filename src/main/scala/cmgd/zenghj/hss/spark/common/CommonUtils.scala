@@ -14,12 +14,17 @@ import scala.collection.JavaConversions._
   * Created by cookeem on 16/8/9.
   */
 object CommonUtils {
-  val hdfsUri = "hdfs://localhost:9000/hss/conf/application.conf"
-  val confTmpFile = File.createTempFile("application", "tmp")
-  confTmpFile.deleteOnExit()
+  val localConfigPath = "conf/application.conf"
+  val localConfig = ConfigFactory.parseFile(new File(localConfigPath))
+  val hdfsUri = localConfig.getString("hadoop.uri")
   val hdfsConf = new Configuration()
   hdfsConf.set("fs.hdfs.impl", classOf[org.apache.hadoop.hdfs.DistributedFileSystem].getName)
   val hdfsFile = FileSystem.get(new URI(hdfsUri), hdfsConf)
+  //把本地的conf/application.conf复制到hdfs上,让executor也可以读取
+  hdfsFile.copyFromLocalFile(false, true, new Path(localConfigPath), new Path(hdfsUri))
+  val confTmpFile = File.createTempFile("application", "tmp")
+  confTmpFile.deleteOnExit()
+  //从hdfs上获取application.conf文件,让executor也可以读取
   hdfsFile.copyToLocalFile(new Path(hdfsUri), new Path(confTmpFile.getAbsolutePath))
 
   val config = ConfigFactory.parseFile(confTmpFile)

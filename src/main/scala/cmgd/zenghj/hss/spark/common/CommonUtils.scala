@@ -1,6 +1,6 @@
 package cmgd.zenghj.hss.spark.common
 
-import java.io.File
+import java.io.{FilenameFilter, File}
 import java.net.URI
 
 import com.typesafe.config.ConfigFactory
@@ -14,18 +14,35 @@ import scala.collection.JavaConversions._
   * Created by cookeem on 16/8/9.
   */
 object CommonUtils {
-  val localConfigPath = "conf/application.conf"
-  val localConfig = ConfigFactory.parseFile(new File(localConfigPath))
-  val hdfsUri = localConfig.getString("hadoop.uri")
+  val localConfigPath = "conf"
+  val localConfigFileName = "application.conf"
+  val localLibPath = "hss-lib"
+  val localConfig = ConfigFactory.parseFile(new File(s"$localConfigPath/$localConfigFileName"))
+  val configHadoop = localConfig.getConfig("hadoop")
+  val configHadoopHostUri = configHadoop.getString("host-uri")
+  val configHadoopRootPath = configHadoop.getString("root-path")
+  val configHadoopConfigPath = configHadoop.getString("config-path")
+  val configHadoopLibPath = configHadoop.getString("lib-path")
+
   val hdfsConf = new Configuration()
   hdfsConf.set("fs.hdfs.impl", classOf[org.apache.hadoop.hdfs.DistributedFileSystem].getName)
-  val hdfsFile = FileSystem.get(new URI(hdfsUri), hdfsConf)
+  val hdfsFileSystem = FileSystem.get(new URI(configHadoopHostUri) ,hdfsConf)
+  hdfsFileSystem.delete(new Path(s"$configHadoopHostUri/$configHadoopRootPath"), true)
+
   //把本地的conf/application.conf复制到hdfs上,让executor也可以读取
-  hdfsFile.copyFromLocalFile(false, true, new Path(localConfigPath), new Path(hdfsUri))
-  val confTmpFile = File.createTempFile("application", "tmp")
+  hdfsFileSystem.mkdirs(new Path(s"$configHadoopHostUri/$configHadoopRootPath/$configHadoopConfigPath"))
+  hdfsFileSystem.copyFromLocalFile(false, true, new Path(s"$localConfigPath/$localConfigFileName"), new Path(s"$configHadoopHostUri/$configHadoopRootPath/$configHadoopConfigPath/$localConfigFileName"))
+  val confTmpFile = File.createTempFile(localConfigFileName, "tmp")
   confTmpFile.deleteOnExit()
   //从hdfs上获取application.conf文件,让executor也可以读取
-  hdfsFile.copyToLocalFile(new Path(hdfsUri), new Path(confTmpFile.getAbsolutePath))
+  hdfsFileSystem.copyToLocalFile(new Path(s"$configHadoopHostUri/$configHadoopRootPath/$configHadoopConfigPath/$localConfigFileName"), new Path(confTmpFile.getAbsolutePath))
+
+  //把lib的jar依赖包复制到hdfs上
+  hdfsFileSystem.mkdirs(new Path(s"$configHadoopHostUri/$configHadoopRootPath/$configHadoopLibPath"))
+  val libPath = new File(localLibPath)
+  libPath.list().filter(_.endsWith(".jar")).foreach { libFileName =>
+    hdfsFileSystem.copyFromLocalFile(false, true, new Path(s"$localLibPath/$libFileName"), new Path(s"$configHadoopHostUri/$configHadoopRootPath/$configHadoopLibPath/$libFileName"))
+  }
 
   val config = ConfigFactory.parseFile(confTmpFile)
 
@@ -46,6 +63,7 @@ object CommonUtils {
   val configEsNumberOfReplicas = configEs.getInt("number-of-replicas")
 
   val configKafka = config.getConfig("kafka")
+  val configKafkaFromBeginning = configKafka.getInt("from-beginning")
   val configKafkaZkUri = configKafka.getString("zookeeper-uri")
   val configKafkaBrokers = configKafka.getString("brokers-list")
   val configKafkaRecordsTopic = configKafka.getString("kafka-records-topic")

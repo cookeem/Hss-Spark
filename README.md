@@ -27,6 +27,7 @@ println(cmd)
 ``
 
 把依赖包复制到hss-lib目录
+运行程序, 自动会把hss-lib目录的文件复制到hdfs上,提供给executor读取
 
 ## 2. sbt编译程序
 

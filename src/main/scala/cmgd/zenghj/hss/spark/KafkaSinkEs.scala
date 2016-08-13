@@ -23,21 +23,26 @@ object KafkaSinkEs extends App {
   val hssLibFile = new File("hss-lib")
   val hssLibPath = hssLibFile.getAbsolutePath
   //通过设置executor的classpath保证executor上也可以执行高版本KryoInjection
+  //todo: 放在hdfs上无效, 原因待检查
+//  conf.set("spark.executor.extraClassPath", s"$configHadoopHostUri/$configHadoopRootPath/$configHadoopLibPath/*")
+//  conf.set("spark.executor.extraLibraryPath", s"$configHadoopHostUri/$configHadoopRootPath/$configHadoopLibPath/*")
   conf.set("spark.executor.extraClassPath", s"$hssLibPath/*")
   conf.set("spark.executor.extraLibraryPath", s"$hssLibPath/*")
   conf.set("es.nodes", configEsNodes)
   conf.set("es.resource", s"$configEsIndexName/$configEsTypeName")
   val ssc = new StreamingContext(conf, Seconds(configSparkStreamInterval))
   val topicsSet = Set(configKafkaRecordsTopic)
-  val kafkaParams = Map[String, String](
+  var kafkaParams = Map[String, String](
     //此选项用于设置kafka重新开始获取数据
-//    ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "smallest",
     "zookeeper.connect" -> configKafkaZkUri,
     "bootstrap.servers" -> configKafkaBrokers,
     "group.id" -> configKafkaConsumeGroup,
     "key.deserializer" -> "org.apache.kafka.common.serialization.StringDeserializer",
     "value.deserializer" -> "org.apache.kafka.common.serialization.ByteArrayDeserializer"
   )
+  if (configKafkaFromBeginning == 1) {
+    kafkaParams = kafkaParams + (ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "smallest")
+  }
 
   //初始化elasticsearch的index
   indexInit()
